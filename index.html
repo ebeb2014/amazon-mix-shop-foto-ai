@@ -56,7 +56,7 @@
       font-weight: 800;
     }
 
-    input {
+    input, select {
       display: block;
       width: 100%;
       padding: 14px;
@@ -149,6 +149,13 @@
       placeholder="Nume operator"
     >
 
+    <label for="condition">Stare produs</label>
+
+    <select id="condition">
+      <option value="new">Nou</option>
+      <option value="used">SH</option>
+    </select>
+
     <label for="photo">Fotografie produs</label>
 
     <input
@@ -189,6 +196,9 @@
   const operator =
     document.getElementById("operator");
 
+  const condition =
+    document.getElementById("condition");
+
   const photo =
     document.getElementById("photo");
 
@@ -204,6 +214,19 @@
 
   operator.value =
     localStorage.getItem("ams_foto_ai_operator") || "";
+
+  condition.value =
+    localStorage.getItem("ams_foto_ai_condition") || "new";
+
+  condition.addEventListener(
+    "change",
+    () => {
+      localStorage.setItem(
+        "ams_foto_ai_condition",
+        condition.value
+      );
+    }
+  );
 
 
   operator.addEventListener(
@@ -294,6 +317,11 @@
       data.append(
         "operator",
         operator.value.trim() || "Telefon"
+      );
+
+      data.append(
+        "condition",
+        condition.value
       );
 
       data.append(
