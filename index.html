@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>Amazon Mix Shop - Foto AI</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #f3f4f6;
+      color: #111827;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    main {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 10px 35px rgba(0,0,0,.10);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 7px 10px;
+      margin-bottom: 18px;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: #047857;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .sub {
+      color: #4b5563;
+      line-height: 1.45;
+    }
+
+    label {
+      display: block;
+      margin: 16px 0 7px;
+      font-weight: 800;
+    }
+
+    input {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      background: white;
+      font-size: 16px;
+    }
+
+    #preview {
+      display: none;
+      width: 100%;
+      max-height: 360px;
+      object-fit: contain;
+      margin-top: 14px;
+      border-radius: 14px;
+      background: #f8fafc;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 16px;
+      border: 0;
+      border-radius: 13px;
+      background: #111827;
+      color: white;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    button:disabled {
+      opacity: .45;
+    }
+
+    #status {
+      display: none;
+      margin-top: 16px;
+      padding: 13px;
+      border-radius: 12px;
+      font-weight: 700;
+    }
+
+    #status.info {
+      display: block;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    #status.ok {
+      display: block;
+      background: #ecfdf5;
+      color: #047857;
+    }
+
+    #status.err {
+      display: block;
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    small {
+      display: block;
+      margin-top: 18px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+
+<body>
+
+<main>
+  <div class="card">
+
+    <div class="badge">FOTO AI CLOUD</div>
+
+    <h1>Amazon Mix Shop</h1>
+
+    <p class="sub">
+      Fotografia ajunge securizat în cloud și este preluată
+      de aplicația din magazin.
+      Telefonul poate fi pe Wi-Fi, 4G sau 5G.
+    </p>
+
+    <label for="operator">Operator</label>
+
+    <input
+      id="operator"
+      type="text"
+      placeholder="Nume operator"
+    >
+
+    <label for="photo">Fotografie produs</label>
+
+    <input
+      id="photo"
+      type="file"
+      accept="image/*"
+      capture="environment"
+    >
+
+    <img id="preview" alt="Previzualizare fotografie">
+
+    <button id="send" type="button" disabled>
+      Trimite fotografia
+    </button>
+
+    <div id="status"></div>
+
+    <small>
+      Sesiunea este temporară.
+      Nu distribui linkul sau codul QR.
+    </small>
+
+  </div>
+</main>
+
+<script>
+(() => {
+
+  const ENDPOINT =
+    "https://cudsiqyutfvqtlluuwnc.supabase.co/functions/v1/ams-foto-ai-upload";
+
+  const params =
+    new URLSearchParams(window.location.search);
+
+  const token =
+    (params.get("token") || "").trim();
+
+  const operator =
+    document.getElementById("operator");
+
+  const photo =
+    document.getElementById("photo");
+
+  const preview =
+    document.getElementById("preview");
+
+  const send =
+    document.getElementById("send");
+
+  const status =
+    document.getElementById("status");
+
+
+  operator.value =
+    localStorage.getItem("ams_foto_ai_operator") || "";
+
+
+  operator.addEventListener(
+    "input",
+    () => {
+      localStorage.setItem(
+        "ams_foto_ai_operator",
+        operator.value
+      );
+    }
+  );
+
+
+  function showStatus(message, type) {
+    status.textContent = message;
+    status.className = type;
+  }
+
+
+  if (token.length < 32) {
+
+    showStatus(
+      "Link Foto AI invalid sau incomplet. Scanează din nou codul QR din aplicație.",
+      "err"
+    );
+
+    photo.disabled = true;
+    send.disabled = true;
+    return;
+  }
+
+
+  photo.addEventListener(
+    "change",
+    () => {
+
+      const file =
+        photo.files && photo.files[0];
+
+      send.disabled = !file;
+
+      if (!file) {
+        preview.style.display = "none";
+        preview.removeAttribute("src");
+        return;
+      }
+
+      preview.src =
+        URL.createObjectURL(file);
+
+      preview.style.display = "block";
+
+      showStatus(
+        "Fotografia este pregătită pentru trimitere.",
+        "info"
+      );
+    }
+  );
+
+
+  send.addEventListener(
+    "click",
+    async () => {
+
+      const file =
+        photo.files && photo.files[0];
+
+      if (!file) {
+        return;
+      }
+
+      send.disabled = true;
+      photo.disabled = true;
+
+      showStatus(
+        "Se încarcă fotografia...",
+        "info"
+      );
+
+      const data =
+        new FormData();
+
+      data.append(
+        "token",
+        token
+      );
+
+      data.append(
+        "operator",
+        operator.value.trim() || "Telefon"
+      );
+
+      data.append(
+        "photo",
+        file,
+        file.name || "photo.jpg"
+      );
+
+
+      try {
+
+        const response =
+          await fetch(
+            ENDPOINT,
+            {
+              method: "POST",
+              body: data
+            }
+          );
+
+        const result =
+          await response.json();
+
+
+        if (
+          !response.ok ||
+          !result.ok
+        ) {
+
+          throw new Error(
+            result.error ||
+            "Încărcarea a eșuat."
+          );
+        }
+
+
+        showStatus(
+          "Fotografia a fost trimisă. Poți fotografia următorul produs.",
+          "ok"
+        );
+
+        photo.value = "";
+
+        preview.style.display =
+          "none";
+
+        preview.removeAttribute(
+          "src"
+        );
+
+      }
+      catch (error) {
+
+        showStatus(
+          error.message ||
+          "Eroare la încărcare.",
+          "err"
+        );
+
+      }
+      finally {
+
+        photo.disabled = false;
+
+        send.disabled =
+          !(
+            photo.files &&
+            photo.files[0]
+          );
+      }
+    }
+  );
+
+})();
+</script>
+
+</body>
+</html>
